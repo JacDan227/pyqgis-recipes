@@ -1,0 +1,86 @@
+#create table join
+#optional- apply a graduated style to final layer
+
+#load the file with spatial data. 
+#for example- the zip shp /vsizip/C:/users/data.zip
+#use "/vsizip/" in the path for access the data contained in the zip archive
+#xyz- your file name
+zip_uri = '/vsizip/location'
+shp =  QgsVectorLayer(zip_uri, 'xyz', 'ogr')
+QgsMapLayerRegistry.instance().addMapLayer(shp)
+
+#load next file
+#for example- csv file
+#xyz- your file name
+csv_uri = 'file:///location'
+csv = QgsVectorLayer(csv_uri, 'xyz', 'delimitedtext')
+QgsMapLayerRegistry.instance().addMapLayer(csv)
+
+#create the table join
+shpField='GEOID'
+csvField='GEO.id2'
+joinObject = QgsVectorJoinInfo()
+joinObject.joinLayerId = csv.id()
+joinObject.joinFieldName = csvField
+joinObject.targetFieldName = shpField
+joinObject.memoryCache = True
+shp.addJoin(joinObject)
+
+#create the joined layer
+import processing
+shpField='GEOID'
+csvField='GEO.id2'
+result = processing.runandload('qgis:joinattributestable', shp, csv, shpField, csvField, None)
+
+#optional- apply a graduated style to final layer
+from PyQt4 import QtGui
+
+#choose column to apply a graduated style, min range- myMin, max range- myMax
+myColumn = 'name your column'
+myRangeList = []
+myOpacity = 1
+
+ranges = []
+
+myMin1 = 0.0
+myMax1 = 1
+myLabel1 = 'Group 1'
+myColor1 = QtGui.QColor('#f7fbff')
+ranges.append((myMin1, myMax1, myLabel1, myColor1))
+
+myMin2 = 1
+myMax2 = 2
+myLabel2 = 'Group 2'
+myColor2 = QtGui.QColor('#c7dcef')
+ranges.append((myMin2, myMax2, myLabel2, myColor2))
+
+myMin3 = 2
+myMax3 = 3
+myLabel3 = 'Group 3'
+myColor3 = QtGui.QColor('#72b2d7')
+ranges.append((myMin3, myMax3, myLabel3, myColor3))
+
+myMin4 = 3
+myMax4 = 4
+myLabel4 = 'Group 4'
+myColor4 = QtGui.QColor('#2878b8')
+ranges.append((myMin4, myMax4, myLabel4, myColor4))
+
+myMin5 = 4
+myMax5 = 5
+myLabel5 = 'Group 5'
+myColor5 = QtGui.QColor('#08306b')
+ranges.append((myMin5, myMax5, myLabel5, myColor5))
+
+for myMin, myMax, myLabel, myColor in ranges:
+  mySymbol = QgsSymbolV2.defaultSymbol(shp.geometryType())
+  mySymbol.setColor(myColor)
+  mySymbol.setAlpha(myOpacity)
+  myRange = QgsRendererRangeV2(myMin, myMax, mySymbol, myLabel)
+  myRangeList.append(myRange)
+
+myRenderer = QgsGraduatedSymbolRendererV2('', myRangeList)
+myRenderer.setMode(QgsGraduatedSymbolRendererV2.Quantile)
+myRenderer.setClassAttribute(myColumn)
+
+shp.setRendererV2(myRenderer)
